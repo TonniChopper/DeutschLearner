@@ -1,1 +1,1 @@
-./d_learner_back/.env
+d_learner_back/.env
