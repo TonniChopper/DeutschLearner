@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-__pycache__/
+d_learner_back/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -8,20 +8,20 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
+d_learner_back/build/
+d_learner_back/develop-eggs/
+d_learner_back/dist/
+d_learner_back/downloads/
+d_learner_back/eggs/
+d_learner_back/.eggs/
+d_learner_back/lib/
+d_learner_back/lib64/
+d_learner_back/parts/
+d_learner_back/sdist/
+d_learner_back/var/
+d_learner_back/wheels/
+d_learner_back/share/python-wheels/
+d_learner_back/*.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
@@ -37,9 +37,9 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
+d_learner_back/htmlcov/
+d_learner_back/.tox/
+d_learner_back/.nox/
 .coverage
 .coverage.*
 .cache
@@ -47,9 +47,9 @@ nosetests.xml
 coverage.xml
 *.cover
 *.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
+d_learner_back/.hypothesis/
+d_learner_back/.pytest_cache/
+d_learner_back/cover/
 
 # Translations
 *.mo
@@ -62,24 +62,24 @@ db.sqlite3
 db.sqlite3-journal
 
 # Flask stuff:
-instance/
+d_learner_back/instance/
 .webassets-cache
 
 # Scrapy stuff:
 .scrapy
 
 # Sphinx documentation
-docs/_build/
+d_learner_back/docs/_build/
 
 # PyBuilder
-.pybuilder/
-target/
+d_learner_back/.pybuilder/
+d_learner_back/target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
 
 # IPython
-profile_default/
+d_learner_back/profile_default/
 ipython_config.py
 
 # pyenv
@@ -110,7 +110,7 @@ ipython_config.py
 .pdm.toml
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
+d_learner_back/__pypackages__/
 
 # Celery stuff
 celerybeat-schedule
@@ -122,11 +122,11 @@ celerybeat.pid
 # Environments
 .env
 .venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+d_learner_back/env/
+d_learner_back/venv/
+d_learner_back/ENV/
+d_learner_back/env.bak/
+d_learner_back/venv.bak/
 
 # Spyder project settings
 .spyderproject
@@ -136,25 +136,21 @@ venv.bak/
 .ropeproject
 
 # mkdocs documentation
-/site
+d_learner_back/site
 
 # mypy
-.mypy_cache/
+d_learner_back/.mypy_cache/
 .dmypy.json
 dmypy.json
 
 # Pyre type checker
-.pyre/
+d_learner_back/.pyre/
 
 # pytype static type analyzer
-.pytype/
+d_learner_back/.pytype/
 
 # Cython debug symbols
-cython_debug/
+d_learner_back/cython_debug/
 
 # PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-.idea/
+d_learner_back/.idea/
