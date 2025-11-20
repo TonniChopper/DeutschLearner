@@ -32,12 +32,15 @@ const Home = () => {
         <section className="py-16 px-8 text-center">
           <h2 className="text-3xl font-bold">Why Choose DeutschLearner?</h2>
           <p className="mt-4 text-lg">
-            We provide AI-generated lessons, real-time progress tracking, and interactive exercises tailored to your learning pace.
+            We provide AI-generated lessons, real-time progress tracking, and interactive exercises
+            tailored to your learning pace.
           </p>
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="p-6 bg-white rounded-lg shadow-md">
               <h3 className="text-xl font-semibold">AI-Powered Lessons</h3>
-              <p className="mt-2">Every lesson is dynamically created based on your progress and needs.</p>
+              <p className="mt-2">
+                Every lesson is dynamically created based on your progress and needs.
+              </p>
             </div>
             <div className="p-6 bg-white rounded-lg shadow-md">
               <h3 className="text-xl font-semibold">Personalized Feedback</h3>
@@ -69,7 +72,10 @@ const Home = () => {
           <p className="mt-4 text-lg">
             Join thousands of learners and take your German skills to the next level.
           </p>
-          <button onClick={handleGetStarted} className="mt-6 px-6 py-3 bg-white text-blue-600 font-semibold rounded-full shadow-lg hover:bg-gray-200">
+          <button
+            onClick={handleGetStarted}
+            className="mt-6 px-6 py-3 bg-white text-blue-600 font-semibold rounded-full shadow-lg hover:bg-gray-200"
+          >
             Sign Up Now
           </button>
         </section>

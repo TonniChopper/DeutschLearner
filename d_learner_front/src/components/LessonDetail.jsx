@@ -15,7 +15,7 @@ const LessonDetail = () => {
       try {
         const response = await Api.get(`learning/lesson/detail/${id}/`);
         setLesson(response.data);
-      } catch (err) {
+      } catch (_err) {
         setError('Failed to load lesson.');
       } finally {
         setLoading(false);
@@ -28,7 +28,7 @@ const LessonDetail = () => {
     try {
       const response = await Api.get('learning/assignment/', { params: { lesson_id: id } });
       setAssignment(response.data);
-    } catch (err) {
+    } catch {
       setError('Failed to generate assignment.');
     }
   };

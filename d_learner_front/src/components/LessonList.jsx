@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Api from '../api/api';
 import { Link } from 'react-router-dom';
-import Loading from "./Loading.jsx";
+import Loading from './Loading.jsx';
 
 const LessonList = () => {
   const [lessons, setLessons] = useState([]);
@@ -14,7 +14,7 @@ const LessonList = () => {
       try {
         const response = await Api.get('learning/lesson/');
         setLessons(response.data);
-      } catch (err) {
+      } catch {
         setError('Failed to load lessons.');
       } finally {
         setLoading(false);
@@ -26,7 +26,7 @@ const LessonList = () => {
   return (
     <div className="max-w-3xl mx-auto p-4">
       <h2 className="text-2xl mb-4">Lessons</h2>
-      {loading && <Loading/>}
+      {loading && <Loading />}
       {error && <p className="text-red-500">{error}</p>}
       <ul>
         {lessons.map(lesson => (

@@ -4,10 +4,10 @@ import Profile from '../components/Profile.jsx';
 
 const ProfilePage = () => {
   return (
-      <div className="min-h-screen bg-gray-100">
-          <Navbar/>
-          <Profile/>
-      </div>
+    <div className="min-h-screen bg-gray-100">
+      <Navbar />
+      <Profile />
+    </div>
   );
 };
 
