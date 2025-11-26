@@ -1,23 +1,25 @@
-import os
+﻿import os
 from pathlib import Path
-import django_heroku
-import dj_database_url
-from decouple import config
-from django.conf import STATICFILES_STORAGE_ALIAS
-from dotenv import load_dotenv
 from datetime import timedelta
-
-load_dotenv()
+import environ
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'your-default-secret-key')
+# Initialize django-environ
+env = environ.Env(
+    DEBUG=(bool, True),
+    LOG_LEVEL=(str, 'INFO'),
+)
+# Read .env (если имеется)
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+SECRET_KEY = env('SECRET_KEY', default='insecure-default-key-change-me')
+DEBUG = env('DEBUG')
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+DEEPSEEK_API_KEY = env('DEEPSEEK_API_KEY', default='YOUR_API_KEY')
 
-DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY', 'YOUR_API_KEY')
 # Application definition
 
 REST_FRAMEWORK = {
@@ -27,13 +29,24 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        'ai-generate': '10/min',
+        'ai-submit': '20/min',
+        'ai-recommend': '10/min',
+        'level-test': '3/min',
+        'ratings': '60/min',
+        'feedback': '60/min',
+        'tasks': '120/min',
+    },
 }
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
-
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -42,6 +55,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # new core application
+    'core',
     'learning',
     'rest_framework',
     'rest_framework.authtoken',
@@ -51,18 +66,19 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    # Optional: включить проверку обязательного прохождения initial test
+    # 'learning.middleware.InitialTestRequiredMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-]
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['http://localhost:5173'])
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'd_learner_back.urls'
 
@@ -95,6 +111,9 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+DATABASE_URL = env('DATABASE_URL', default=None)
+if DATABASE_URL:
+    DATABASES['default'] = dj_database_url.parse(DATABASE_URL, conn_max_age=600)
 
 
 # Password validation
@@ -119,12 +138,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+LANGUAGE_CODE = env('LANGUAGE_CODE', default='de')
+TIME_ZONE = env('TIME_ZONE', default='Europe/Berlin')
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -140,7 +156,6 @@ STATICFILES_DIRS = [
 
 # Folder where collectstatic will output collected static files (avoid conflict with STATICFILES_DIRS)
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
@@ -151,16 +166,68 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {name} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '[{levelname}] {message}',
+            'style': '{',
+        },
+        'json': {
+            'format': '{"ts": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "msg": %(message)s}',
+        }
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
         },
+        'audit_console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'json',
+        }
     },
     'root': {
         'handlers': ['console'],
-        'level': 'INFO',
+        'level': env('LOG_LEVEL', default='INFO'),
     },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': env('LOG_LEVEL', default='INFO'),
+            'propagate': False,
+        },
+        'core': {
+            'handlers': ['console'],
+            'level': env('LOG_LEVEL', default='INFO'),
+        },
+        'audit': {
+            'handlers': ['audit_console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'monitoring': {
+            'handlers': ['audit_console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    }
 }
 
-# Activate Django-Heroku.
-django_heroku.settings(locals())
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Cache configuration (Redis in production)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if DEBUG else 'django_redis.cache.RedisCache',
+        'LOCATION': env('REDIS_URL', default='redis://127.0.0.1:6379/0'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        } if not DEBUG else {},
+        'KEY_PREFIX': 'deutschlearner',
+        'TIMEOUT': 300,
+    }
+}

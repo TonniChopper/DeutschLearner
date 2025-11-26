@@ -1,8 +1,10 @@
-# language: python
+﻿# language: python
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import UserProfile, Lesson, Progress, Assignment
-from django.contrib.auth import authenticate
+from .models import (
+    UserProfile, Lesson, Progress, Assignment,
+    ExerciseHistory, Recommendation, Rating, ExperienceSummary, LevelTest
+)
 
 # class RegistrationSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -34,100 +36,140 @@ from django.contrib.auth import authenticate
 #         raise serializers.ValidationError("Must include username and password.")
 
 class UserSerializer(serializers.ModelSerializer):
-    """
-    Serializer for User model.
-    """
+    """Serializer for User model."""
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'password']
-        extra_kwargs = {'password': {'write_only': True}}
+        extra_kwargs = {
+            'password': {'write_only': True, 'min_length': 8},
+            'id': {'read_only': True}
+        }
 
     def validate_username(self, value):
-        """ Проверка на уникальность имени пользователя """
+        """Check username uniqueness."""
+        if self.instance and self.instance.username == value:
+            return value
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError('Username already exists.')
         return value
 
+    def create(self, validated_data):
+        return User.objects.create_user(**validated_data)
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    """
-    Serializer for user profile.
-    Allows updating email and password for the nested user,
-    while preventing updates to progress, language_level, and errors.
-    """
-    user = UserSerializer()
+    """Serializer for user profile with read-only computed fields."""
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
 
     class Meta:
         model = UserProfile
-        fields = ['user', 'name', 'email', 'surname', 'age', 'language_level', 'progress', 'errors']
-        extra_kwargs = {'id': {'read_only': True}}
-
-    def update(self, instance, validated_data):
-        # Pop nested user data from validated_data
-        user_data = validated_data.pop('user', {})
-
-        # Prevent updates to fields that should not be changed by the user
-        validated_data.pop('progress', None)
-        validated_data.pop('language_level', None)
-        validated_data.pop('errors', None)
-
-        user = instance.user
-        if 'email' in user_data:
-            user.email = user_data['email']
-        if 'password' in user_data:
-            # Change the user's password securely
-            user.set_password(user_data['password'])
-        user.save()
-
-        instance = super().update(instance, validated_data)
-        return instance
+        fields = [
+            'id', 'username', 'email', 'name', 'surname', 'age',
+            'language_level', 'progress', 'errors', 'learning_streak',
+            'personal_goals', 'last_active', 'preferred_task_types',
+            'avatar', 'bio'
+        ]
+        read_only_fields = ['id', 'progress', 'errors', 'learning_streak', 'last_active']
 
 class LessonSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Lesson model.
-    """
+    """Serializer for Lesson model with assignment count."""
+    assignments_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Lesson
-        fields = ['id', 'title', 'content', 'created_at']
-        extra_kwargs = {'created_at': {'read_only': True}}
+        fields = ['id', 'title', 'content', 'created_at', 'status', 'assignments_count']
+        read_only_fields = ['id', 'created_at']
 
-    def create(self, validated_data):
-        return Lesson.objects.create(**validated_data)
+    def get_assignments_count(self, obj):
+        return obj.assignments.count()
 
-    def update(self, instance, validated_data):
-        instance.title = validated_data.get('title', instance.title)
-        instance.content = validated_data.get('content', instance.content)
-        instance.save()
-        return instance
-
-    def validate(self, data):
-        if 'title' in data:
-            if Lesson.objects.filter(title=data['title']).exists():
-                raise serializers.ValidationError('Lesson with this title already exists.')
-        return data
+    def validate_title(self, value):
+        """Check title uniqueness только для текущего пользователя."""
+        user = self.context['request'].user
+        qs = Lesson.objects.filter(title=value, user=user)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('Lesson with this title already exists.')
+        return value
 
 class AssignmentSerializer(serializers.ModelSerializer):
+    lesson_title = serializers.CharField(source='lesson.title', read_only=True)
+
     class Meta:
         model = Assignment
-        fields = ['id', 'lesson', 'content', 'created_at']
+        fields = ['id', 'lesson', 'lesson_title', 'content', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 class ProgressSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Progress model.
-    """
-    lesson = LessonSerializer(read_only=True)
+    """Serializer for Progress model."""
+    lesson_title = serializers.CharField(source='lesson.title', read_only=True)
 
     class Meta:
         model = Progress
-        fields = ['id', 'user', 'lesson', 'completed', 'errors_count', 'updated_at']
+        fields = ['id', 'lesson', 'lesson_title', 'completed', 'errors_count', 'updated_at']
+        read_only_fields = ['id', 'updated_at']
 
-    def create(self, validated_data):
-        return Progress.objects.create(**validated_data)
+class ExerciseHistorySerializer(serializers.ModelSerializer):
+    """Serializer for ExerciseHistory with validation."""
 
-    def update(self, instance, validated_data):
-        instance.user = validated_data.get('user', instance.user)
-        instance.lesson = validated_data.get('lesson', instance.lesson)
-        instance.completed = validated_data.get('completed', instance.completed)
-        instance.errors_count = validated_data.get('errors_count', instance.errors_count)
-        instance.save()
-        return instance
+    class Meta:
+        model = ExerciseHistory
+        fields = [
+            'id', 'task_type', 'ai_prompt', 'ai_generated_task_xml',
+            'user_submission_raw', 'user_submission_parsed', 'ai_feedback_xml',
+            'result_score', 'attempt_timestamp', 'completion_status',
+            'parsed_task', 'parsed_feedback', 'parse_errors', 'user_feedback_notes'
+        ]
+        read_only_fields = ['id', 'attempt_timestamp']
+
+    def validate_result_score(self, value):
+        if value is not None and not (0 <= value <= 1):
+            raise serializers.ValidationError('Score must be between 0 and 1.')
+        return value
+
+class RecommendationSerializer(serializers.ModelSerializer):
+    """Serializer for Recommendation model."""
+
+    class Meta:
+        model = Recommendation
+        fields = ['id', 'ai_prompt', 'generated_recommendations_xml', 'rating', 'timestamp']
+        read_only_fields = ['id', 'timestamp']
+
+    def validate_rating(self, value):
+        if value is not None and not (1 <= value <= 5):
+            raise serializers.ValidationError('Rating must be between 1 and 5.')
+        return value
+
+class RatingSerializer(serializers.ModelSerializer):
+    """Serializer for Rating with GenericForeignKey support."""
+
+    class Meta:
+        model = Rating
+        fields = ['id', 'content_type', 'object_id', 'rating_type', 'value', 'ai_feedback_xml', 'timestamp']
+        read_only_fields = ['id', 'timestamp']
+
+    def validate_value(self, value):
+        if not (1 <= value <= 5):
+            raise serializers.ValidationError('Rating value must be between 1 and 5.')
+        return value
+
+class ExperienceSummarySerializer(serializers.ModelSerializer):
+    """Serializer for ExperienceSummary."""
+
+    class Meta:
+        model = ExperienceSummary
+        fields = ['id', 'total_xp', 'completed_exercises', 'session_logs', 'skill_tree_json', 'updated_at']
+        read_only_fields = ['id', 'updated_at']
+
+class LevelTestSerializer(serializers.ModelSerializer):
+    """Serializer for LevelTest."""
+
+    class Meta:
+        model = LevelTest
+        fields = [
+            'id', 'test_type', 'ai_generated_test_xml', 'user_answers',
+            'ai_evaluation_xml', 'determined_level', 'total_score',
+            'completed', 'started_at', 'completed_at'
+        ]
+        read_only_fields = ['id', 'started_at', 'completed_at', 'ai_evaluation_xml', 'determined_level', 'total_score']
